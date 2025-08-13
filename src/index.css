@@ -2,41 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* FPL Assistant Design System - Modern & Glassy */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 240 10% 98%;
+    --foreground: 224 71.4% 4.1%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 71.4% 4.1%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 224 71.4% 4.1%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* FPL Brand Colors */
+    --primary: 271 81% 56%;
+    --primary-foreground: 210 20% 98%;
+    --primary-glow: 271 81% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 20% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 271 81% 56%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+
+    /* FPL Specific Colors */
+    --fpl-green: 142 76% 36%;
+    --fpl-amber: 32 95% 44%;
+    --fpl-red: 0 84% 60%;
+    --fpl-blue: 213 94% 68%;
+    --fpl-purple: 271 81% 56%;
+
+    /* Glass Effects */
+    --glass-bg: 255 255 255 / 0.1;
+    --glass-border: 255 255 255 / 0.2;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-glass: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    );
+    
+    /* Shadows */
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,33 +79,47 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 271 81% 56%;
+    --primary-foreground: 210 20% 98%;
+    --primary-glow: 271 81% 70%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 20% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 271 81% 56%;
+
+    /* Dark mode glass effects */
+    --glass-bg: 0 0 0 / 0.1;
+    --glass-border: 255 255 255 / 0.1;
+    
+    --gradient-glass: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02)
+    );
+    
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.2);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -100,6 +137,76 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted) / 0.3));
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Glass effect utilities */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-card {
+    @apply glass rounded-2xl;
+  }
+
+  /* FPL Position chips */
+  .position-chip-gk {
+    @apply bg-yellow-500/20 text-yellow-700 border-yellow-500/30;
+  }
+
+  .position-chip-def {
+    @apply bg-blue-500/20 text-blue-700 border-blue-500/30;
+  }
+
+  .position-chip-mid {
+    @apply bg-green-500/20 text-green-700 border-green-500/30;
+  }
+
+  .position-chip-fwd {
+    @apply bg-red-500/20 text-red-700 border-red-500/30;
+  }
+
+  /* FDR (Fixture Difficulty Rating) colors */
+  .fdr-1 {
+    @apply bg-green-500 text-white;
+  }
+
+  .fdr-2 {
+    @apply bg-lime-500 text-white;
+  }
+
+  .fdr-3 {
+    @apply bg-yellow-500 text-black;
+  }
+
+  .fdr-4 {
+    @apply bg-orange-500 text-white;
+  }
+
+  .fdr-5 {
+    @apply bg-red-500 text-white;
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-smooth hover:scale-[1.02] hover:shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-smooth hover:shadow-[var(--shadow-glow)];
   }
 }
