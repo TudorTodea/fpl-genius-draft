@@ -6,22 +6,44 @@ import { TeamBuilder } from '@/components/teambuilder/TeamBuilder';
 import { AIRecommender } from '@/components/ai/AIRecommender';
 import { PlayerModal } from '@/components/player/PlayerModal';
 import { useFPLStore } from '@/store/fplStore';
-import { mockPlayers } from '@/data/mockPlayers';
+import { useFPLData } from '@/hooks/useFPLData';
 
 const Index = () => {
   const { 
-    setPlayers, 
-    filteredPlayers, 
     selectedPlayer, 
     setSelectedPlayer,
-    filters,
-    searchQuery 
   } = useFPLStore();
 
-  useEffect(() => {
-    // Initialize with mock data
-    setPlayers(mockPlayers);
-  }, [setPlayers]);
+  const { loading, error, refetch } = useFPLData();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Loading FPL data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-red-500 text-xl">⚠️</div>
+          <h2 className="text-xl font-semibold">Failed to load FPL data</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <button 
+            onClick={refetch}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
