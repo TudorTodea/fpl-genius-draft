@@ -19,14 +19,20 @@ interface AIRecommendation {
 export function AIRecommender() {
   const { players, addToTeam } = useFPLStore();
 
-  // Smart AI recommendations based on actual player data
+  // Smart AI recommendations based on actual player data with better filters
   const recommendations: AIRecommendation[] = [
     {
       category: 'Top Picks',
       title: 'Best Value This Gameweek',
       description: 'High predicted points relative to price with good ownership balance.',
       players: players
-        .filter(p => p.rotationRiskPct < 40 && p.predPts_gw > 4) // Filter out rotation risks
+        .filter(p => 
+          p.rotationRiskPct < 35 && 
+          p.predPts_gw > 4 && 
+          p.minutesL5 > 180 &&
+          p.injuryStatus === 'Fit' &&
+          p.ownership > 0.5 // Must have some ownership to show they actually play
+        )
         .sort((a, b) => (b.predPts_gw / b.price) - (a.predPts_gw / a.price))
         .slice(0, 3),
       confidence: 92,
@@ -35,9 +41,16 @@ export function AIRecommender() {
     {
       category: 'Differentials',
       title: 'Low Ownership Gems',
-      description: 'Under 10% owned players with high potential for big returns.',
+      description: 'Under 15% owned players with high potential for big returns.',
       players: players
-        .filter(p => p.ownership < 10 && p.rotationRiskPct < 30 && p.predPts_gw > 3)
+        .filter(p => 
+          p.ownership < 15 && 
+          p.ownership > 1 && // Must have some ownership
+          p.rotationRiskPct < 40 && 
+          p.predPts_gw > 3.5 &&
+          p.minutesL5 > 150 &&
+          p.injuryStatus === 'Fit'
+        )
         .sort((a, b) => b.predPts_gw - a.predPts_gw)
         .slice(0, 3),
       confidence: 78,
@@ -48,7 +61,13 @@ export function AIRecommender() {
       title: 'Cheap Starting Players',
       description: 'Affordable players who regularly start and provide steady returns.',
       players: players
-        .filter(p => p.price <= 5.0 && p.rotationRiskPct < 50 && p.minutesL5 > 200)
+        .filter(p => 
+          p.price <= 5.5 && 
+          p.rotationRiskPct < 45 && 
+          p.minutesL5 > 180 &&
+          p.injuryStatus === 'Fit' &&
+          p.ownership > 0.5
+        )
         .sort((a, b) => a.rotationRiskPct - b.rotationRiskPct)
         .slice(0, 3),
       confidence: 85,
@@ -59,7 +78,14 @@ export function AIRecommender() {
       title: 'Captain Contenders',
       description: 'High-priced players with highest ceiling for big hauls.',
       players: players
-        .filter(p => p.price > 8.0 && p.predPts_gw > 5 && p.rotationRiskPct < 25)
+        .filter(p => 
+          p.price > 8.5 && 
+          p.predPts_gw > 5.5 && 
+          p.rotationRiskPct < 25 &&
+          p.minutesL5 > 300 &&
+          p.injuryStatus === 'Fit' &&
+          p.ownership > 5 // Popular enough to be considered premium
+        )
         .sort((a, b) => b.predPts_gw - a.predPts_gw)
         .slice(0, 3),
       confidence: 71,

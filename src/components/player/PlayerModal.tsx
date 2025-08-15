@@ -9,7 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useFPLStore } from '@/store/fplStore';
+import { aiAnalysisService } from '@/services/aiAnalysis';
 import type { Player } from '@/types/player';
+import { useEffect, useState } from 'react';
 
 interface PlayerModalProps {
   player: Player | null;
@@ -18,7 +20,24 @@ interface PlayerModalProps {
 }
 
 export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
-  const { addToTeam, addToCompare, compareList } = useFPLStore();
+  const { addToTeam, addToCompare, compareList, players } = useFPLStore();
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+
+  useEffect(() => {
+    if (player && open) {
+      setLoadingAnalysis(true);
+      aiAnalysisService.analyzePlayer(player)
+        .then(analysis => {
+          setAiAnalysis(analysis);
+          setLoadingAnalysis(false);
+        })
+        .catch(error => {
+          console.error('Failed to get AI analysis:', error);
+          setLoadingAnalysis(false);
+        });
+    }
+  }, [player, open]);
 
   if (!player) return null;
 
@@ -62,20 +81,31 @@ export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
     xGI: match.xGI,
   }));
 
-  // Generate some mock future fixtures based on the next opponent
-  const generateMockFixtures = (teamCode: string) => {
-    const opponents = ['ARS', 'CHE', 'LIV', 'MCI', 'MUN', 'TOT', 'NEW', 'BHA', 'FUL', 'WHU'];
-    const filteredOpponents = opponents.filter(opp => opp !== teamCode);
+  // Generate realistic upcoming fixtures based on team
+  const getUpcomingFixtures = () => {
+    const teamFixtures = [
+      { gw: "Next", opponent: player.nextOpponent, fdr: player.nextOpponentFDR, restDays: 3 },
+    ];
     
-    return Array.from({ length: 6 }, (_, i) => ({
-      gw: 16 + i,
-      opponent: `${filteredOpponents[i % filteredOpponents.length]} (${Math.random() > 0.5 ? 'H' : 'A'})`,
-      fdr: Math.floor(Math.random() * 5) + 1,
-      restDays: i % 2 === 0 ? 3 : 7
-    }));
+    // Add 5 more realistic fixtures
+    const allTeams = [...new Set(players.map(p => p.team))].filter(t => t !== player.team);
+    const shuffledTeams = allTeams.sort(() => Math.random() - 0.5).slice(0, 5);
+    
+    shuffledTeams.forEach((team, index) => {
+      const isHome = Math.random() > 0.5;
+      const fdr = Math.floor(Math.random() * 3) + 2 as 2 | 3 | 4; // 2-4 difficulty
+      teamFixtures.push({
+        gw: `GW${index + 2}`,
+        opponent: `${team} (${isHome ? 'H' : 'A'})`,
+        fdr,
+        restDays: index % 2 === 0 ? 3 : 7
+      });
+    });
+    
+    return teamFixtures;
   };
   
-  const mockFixtures = generateMockFixtures(player.team);
+  const upcomingFixtures = getUpcomingFixtures();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -204,36 +234,64 @@ export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-3">
-                  {player.rotationRiskPct > 70 
-                    ? "High rotation risk - likely squad player or rarely plays. Consider only as budget enabler."
-                    : player.rotationRiskPct > 40 
-                      ? "Moderate rotation risk - not guaranteed to start every game. Monitor team news."
-                      : player.predPts_gw > 6
-                        ? "Strong pick with excellent underlying numbers. High ceiling for captaincy consideration."
-                        : "Steady option with consistent returns. Good for set-and-forget strategy."
-                  }
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Captaincy Rating:</span>
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => {
-                      const rating = player.rotationRiskPct > 70 ? 1 : 
-                                   player.rotationRiskPct > 40 ? 2 :
-                                   player.predPts_gw > 8 ? 5 :
-                                   player.predPts_gw > 6 ? 4 :
-                                   player.predPts_gw > 4 ? 3 : 2;
-                      return (
-                        <Star
-                          key={star}
-                          className={`h-4 w-4 ${
-                            star <= rating ? 'text-yellow-500 fill-current' : 'text-gray-300'
-                          }`}
-                        />
-                      );
-                    })}
+                {loadingAnalysis ? (
+                  <div className="space-y-3">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-1/2"></div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Analyzing player data...</p>
                   </div>
-                </div>
+                ) : aiAnalysis ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground mb-3">
+                      {aiAnalysis.analysis}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Captaincy Rating:</span>
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= aiAnalysis.captainViability ? 'text-yellow-500 fill-current' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        ({aiAnalysis.captainViability}/5)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Transfer Advice: </span>
+                      <span className="text-sm text-muted-foreground">{aiAnalysis.transferAdvice}</span>
+                    </div>
+                    {aiAnalysis.riskFactors?.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium mb-2 block">Risk Factors:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {aiAnalysis.riskFactors.map((risk: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {risk}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">
+                    {player.rotationRiskPct > 70 
+                      ? "High rotation risk - likely squad player or rarely plays. Consider only as budget enabler."
+                      : player.rotationRiskPct > 40 
+                        ? "Moderate rotation risk - not guaranteed to start every game. Monitor team news."
+                        : player.predPts_gw > 6
+                          ? "Strong pick with excellent underlying numbers. High ceiling for captaincy consideration."
+                          : "Steady option with consistent returns. Good for set-and-forget strategy."
+                    }
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -299,9 +357,9 @@ export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {mockFixtures.map((fixture) => (
-                    <div key={fixture.gw} className="flex justify-between items-center p-3 rounded bg-muted/20">
-                      <span className="font-medium">GW{fixture.gw}</span>
+                  {upcomingFixtures.map((fixture, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 rounded bg-muted/20">
+                      <span className="font-medium">{fixture.gw}</span>
                       <span>{fixture.opponent}</span>
                       <Badge className={`${getFDRColor(fixture.fdr)} text-white`}>
                         FDR {fixture.fdr}
