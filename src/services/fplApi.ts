@@ -97,7 +97,10 @@ export interface FPLFixture {
   pulse_id: number;
 }
 
-const FPL_BASE_URL = 'https://fantasy.premierleague.com/api';
+const FPL_BASE_URL =
+  typeof import.meta !== "undefined" && import.meta.env.DEV
+    ? "/fpl"
+    : "/api/fpl";
 
 class FPLApiService {
   private cache: Map<string, { data: any; timestamp: number }> = new Map();

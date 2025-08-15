@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, ArrowUpDown, Eye, Settings } from 'lucide-react';
+import { Plus, ArrowUpDown, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,6 +18,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { useFPLStore } from '@/store/fplStore';
 import type { Player, Position } from '@/types/player';
 
@@ -30,7 +38,15 @@ interface Column {
 }
 
 export function PlayerTable() {
-  const { filteredPlayers, setSelectedPlayer, addToTeam } = useFPLStore();
+  const { 
+    filteredPlayers, 
+    currentPage, 
+    itemsPerPage, 
+    totalPages,
+    setSelectedPlayer, 
+    addToTeam,
+    setCurrentPage 
+  } = useFPLStore();
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Player | null;
     direction: 'asc' | 'desc';
@@ -243,23 +259,30 @@ export function PlayerTable() {
   const visibleColumns = columns.filter(col => !col.hidden);
 
   const sortedPlayers = useMemo(() => {
-    if (!sortConfig.key) return filteredPlayers;
+    let sorted = filteredPlayers;
+    
+    if (sortConfig.key) {
+      sorted = [...filteredPlayers].sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof Player];
+        const bValue = b[sortConfig.key as keyof Player];
 
-    return [...filteredPlayers].sort((a, b) => {
-      const aValue = a[sortConfig.key as keyof Player];
-      const bValue = b[sortConfig.key as keyof Player];
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
 
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
+        const aString = String(aValue);
+        const bString = String(bValue);
+        return sortConfig.direction === 'asc' 
+          ? aString.localeCompare(bString)
+          : bString.localeCompare(aString);
+      });
+    }
 
-      const aString = String(aValue);
-      const bString = String(bValue);
-      return sortConfig.direction === 'asc' 
-        ? aString.localeCompare(bString)
-        : bString.localeCompare(aString);
-    });
-  }, [filteredPlayers, sortConfig]);
+    // Apply pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return sorted.slice(startIndex, endIndex);
+  }, [filteredPlayers, sortConfig, currentPage, itemsPerPage]);
 
   const handleSort = (key: keyof Player) => {
     setSortConfig(prev => ({
@@ -322,6 +345,50 @@ export function PlayerTable() {
         <div className="text-center py-12 text-muted-foreground">
           <p>No players found matching your filters.</p>
           <p className="text-sm mt-2">Try adjusting your search criteria.</p>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-border/50">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPlayers.length)} of {filteredPlayers.length} players
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const page = i + Math.max(1, currentPage - 2);
+                  if (page > totalPages) return null;
+                  
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={page === currentPage}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       )}
     </motion.div>

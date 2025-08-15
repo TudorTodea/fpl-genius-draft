@@ -88,7 +88,7 @@ export function transformFPLPlayer(
     historyVsNextOpp: [], // Would need additional API calls
     lastMatches,
     news: fplPlayer.news ? [fplPlayer.news] : undefined,
-    photoUrl: `https://resources.premierleague.com/premierleague/photos/players/250x250/${fplPlayer.photo.replace('.jpg', '.png')}`
+    photoUrl: fplPlayer.photo ? `https://resources.premierleague.com/premierleague/photos/players/250x250/p${fplPlayer.photo.replace('.jpg', '.png')}` : undefined
   };
 }
 

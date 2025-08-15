@@ -1,10 +1,86 @@
 import { create } from 'zustand';
 import { Player, PlayerFilters, TeamBuilderPlayer, Position } from '@/types/player';
 
+// Filter application function
+function applyFilters(players: Player[], filters: PlayerFilters, searchQuery: string): Player[] {
+  return players.filter(player => {
+    // Search query filter
+    if (searchQuery && !player.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !player.team.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    // Position filter
+    if (filters.positions.length > 0 && !filters.positions.includes(player.position)) {
+      return false;
+    }
+
+    // Team filter
+    if (filters.teams.length > 0 && !filters.teams.includes(player.team)) {
+      return false;
+    }
+
+    // Price range filter
+    if (player.price < filters.priceRange[0] || player.price > filters.priceRange[1]) {
+      return false;
+    }
+
+    // Ownership range filter
+    if (player.ownership < filters.ownershipRange[0] || player.ownership > filters.ownershipRange[1]) {
+      return false;
+    }
+
+    // Minutes range filter
+    if (player.minutesL5 < filters.minutesRange[0] || player.minutesL5 > filters.minutesRange[1]) {
+      return false;
+    }
+
+    // Form range filter
+    if (player.formL5 < filters.formRange[0] || player.formL5 > filters.formRange[1]) {
+      return false;
+    }
+
+    // Predicted points filters
+    if (player.predPts_gw < filters.predPtsGW[0] || player.predPts_gw > filters.predPtsGW[1]) {
+      return false;
+    }
+
+    if (player.predPts_3gw < filters.predPts3GW[0] || player.predPts_3gw > filters.predPts3GW[1]) {
+      return false;
+    }
+
+    if (player.predPts_6gw < filters.predPts6GW[0] || player.predPts_6gw > filters.predPts6GW[1]) {
+      return false;
+    }
+
+    // FDR range filter
+    if (player.nextOpponentFDR < filters.fdrRange[0] || player.nextOpponentFDR > filters.fdrRange[1]) {
+      return false;
+    }
+
+    // Injury doubts filter
+    if (filters.injuryDoubts && player.injuryStatus === 'Fit') {
+      return false;
+    }
+
+    // Rotation risk filter
+    if (filters.rotationRisk && player.rotationRiskPct < 20) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
 interface FPLStore {
   // Data
   players: Player[];
   filteredPlayers: Player[];
+  
+  // Pagination
+  currentPage: number;
+  itemsPerPage: number;
+  totalPages: number;
   
   // UI State
   currentGameweek: number;
@@ -41,6 +117,8 @@ interface FPLStore {
   setCaptain: (playerId: string) => void;
   setViceCaptain: (playerId: string) => void;
   clearTeam: () => void;
+  setCurrentPage: (page: number) => void;
+  setItemsPerPage: (items: number) => void;
 }
 
 const initialFilters: PlayerFilters = {
@@ -62,6 +140,9 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
   // Initial state
   players: [],
   filteredPlayers: [],
+  currentPage: 1,
+  itemsPerPage: 50,
+  totalPages: 0,
   currentGameweek: 1,
   currentSeason: '24/25',
   searchQuery: '',
@@ -77,7 +158,11 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
 
   // Actions
   setPlayers: (players) => {
-    set({ players, filteredPlayers: players });
+    set((state) => {
+      const filtered = applyFilters(players, state.filters, state.searchQuery);
+      const totalPages = Math.ceil(filtered.length / state.itemsPerPage);
+      return { players, filteredPlayers: filtered, totalPages, currentPage: 1 };
+    });
   },
 
   setFilteredPlayers: (players) => {
@@ -88,7 +173,13 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
   
   setCurrentSeason: (season) => set({ currentSeason: season }),
   
-  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchQuery: (query) => {
+    set((state) => {
+      const filtered = applyFilters(state.players, state.filters, query);
+      const totalPages = Math.ceil(filtered.length / state.itemsPerPage);
+      return { searchQuery: query, filteredPlayers: filtered, totalPages, currentPage: 1 };
+    });
+  },
   
   setSelectedPlayer: (player) => set({ selectedPlayer: player }),
   
@@ -107,10 +198,21 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
   clearCompare: () => set({ compareList: [] }),
   
   updateFilters: (newFilters) => {
-    set({ filters: { ...get().filters, ...newFilters } });
+    set((state) => {
+      const updatedFilters = { ...state.filters, ...newFilters };
+      const filtered = applyFilters(state.players, updatedFilters, state.searchQuery);
+      const totalPages = Math.ceil(filtered.length / state.itemsPerPage);
+      return { filters: updatedFilters, filteredPlayers: filtered, totalPages, currentPage: 1 };
+    });
   },
   
-  clearFilters: () => set({ filters: initialFilters }),
+  clearFilters: () => {
+    set((state) => {
+      const filtered = applyFilters(state.players, initialFilters, state.searchQuery);
+      const totalPages = Math.ceil(filtered.length / state.itemsPerPage);
+      return { filters: initialFilters, filteredPlayers: filtered, totalPages, currentPage: 1 };
+    });
+  },
   
   addToTeam: (player) => {
     const { teamBuilder } = get();
@@ -188,6 +290,16 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
         totalPredPts: 0,
         formation: '3-5-2',
       }
+    });
+  },
+
+  setCurrentPage: (page) => set({ currentPage: page }),
+  
+  setItemsPerPage: (items) => {
+    set((state) => {
+      const totalPages = Math.ceil(state.filteredPlayers.length / items);
+      const currentPage = Math.min(state.currentPage, totalPages || 1);
+      return { itemsPerPage: items, totalPages, currentPage };
     });
   },
 }));
