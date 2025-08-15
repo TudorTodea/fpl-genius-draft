@@ -48,11 +48,22 @@ export function transformFPLPlayer(
   const expectedAssists = parseFloat(fplPlayer.expected_assists) || 0;
   const expectedGI = parseFloat(fplPlayer.expected_goal_involvements) || 0;
 
-  // Estimate rotation risk based on minutes and form
+  // Estimate rotation risk based on minutes, form, and selection status
   let rotationRisk = 5;
-  if (fplPlayer.minutes < 360) rotationRisk = 25;
-  else if (fplPlayer.minutes < 270) rotationRisk = 40;
-  else if (form < 3) rotationRisk = 15;
+  
+  // If player has very few minutes, high rotation risk
+  if (fplPlayer.minutes < 90) rotationRisk = 95; // Barely played
+  else if (fplPlayer.minutes < 270) rotationRisk = 75; // Squad player
+  else if (fplPlayer.minutes < 450) rotationRisk = 45; // Rotation prone
+  else if (fplPlayer.minutes < 720) rotationRisk = 25; // Regular starter with some rotation
+  else rotationRisk = 10; // Nailed starter
+  
+  // Adjust based on ownership (proxy for expected starts)
+  if (ownership < 1.0) rotationRisk = Math.min(95, rotationRisk + 30);
+  else if (ownership < 5.0) rotationRisk = Math.min(85, rotationRisk + 15);
+  
+  // Adjust based on form
+  if (form < 2) rotationRisk = Math.min(90, rotationRisk + 10);
 
   // Generate mock recent matches (in real implementation, this would come from history API)
   const lastMatches = Array.from({ length: 5 }, (_, i) => ({

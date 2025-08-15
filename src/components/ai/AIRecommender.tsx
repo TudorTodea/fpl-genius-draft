@@ -19,13 +19,16 @@ interface AIRecommendation {
 export function AIRecommender() {
   const { players, addToTeam } = useFPLStore();
 
-  // Mock AI recommendations - in a real app this would come from an AI service
+  // Smart AI recommendations based on actual player data
   const recommendations: AIRecommendation[] = [
     {
       category: 'Top Picks',
       title: 'Best Value This Gameweek',
       description: 'High predicted points relative to price with good ownership balance.',
-      players: players.slice(0, 3),
+      players: players
+        .filter(p => p.rotationRiskPct < 40 && p.predPts_gw > 4) // Filter out rotation risks
+        .sort((a, b) => (b.predPts_gw / b.price) - (a.predPts_gw / a.price))
+        .slice(0, 3),
       confidence: 92,
       icon: <TrendingUp className="h-4 w-4" />
     },
@@ -33,7 +36,10 @@ export function AIRecommender() {
       category: 'Differentials',
       title: 'Low Ownership Gems',
       description: 'Under 10% owned players with high potential for big returns.',
-      players: players.filter(p => p.ownership < 20).slice(0, 3),
+      players: players
+        .filter(p => p.ownership < 10 && p.rotationRiskPct < 30 && p.predPts_gw > 3)
+        .sort((a, b) => b.predPts_gw - a.predPts_gw)
+        .slice(0, 3),
       confidence: 78,
       icon: <Users className="h-4 w-4" />
     },
@@ -41,15 +47,21 @@ export function AIRecommender() {
       category: 'Budget Enablers',
       title: 'Cheap Starting Players',
       description: 'Affordable players who regularly start and provide steady returns.',
-      players: players.filter(p => p.price <= 5.0).slice(0, 3),
+      players: players
+        .filter(p => p.price <= 5.0 && p.rotationRiskPct < 50 && p.minutesL5 > 200)
+        .sort((a, b) => a.rotationRiskPct - b.rotationRiskPct)
+        .slice(0, 3),
       confidence: 85,
       icon: <DollarSign className="h-4 w-4" />
     },
     {
-      category: 'High Risk/Reward',
+      category: 'Premium Options',
       title: 'Captain Contenders',
-      description: 'Players with highest ceiling for big hauls but with some risk.',
-      players: players.filter(p => p.predPts_gw > 6).slice(0, 3),
+      description: 'High-priced players with highest ceiling for big hauls.',
+      players: players
+        .filter(p => p.price > 8.0 && p.predPts_gw > 5 && p.rotationRiskPct < 25)
+        .sort((a, b) => b.predPts_gw - a.predPts_gw)
+        .slice(0, 3),
       confidence: 71,
       icon: <Zap className="h-4 w-4" />
     }

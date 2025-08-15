@@ -121,7 +121,7 @@ export function PlayerTable() {
     },
     {
       key: 'formL5',
-      label: 'Form',
+      label: 'Form (5 GW)',
       sortable: true,
       render: (player) => (
         <span className="font-mono text-sm">
@@ -131,7 +131,7 @@ export function PlayerTable() {
     },
     {
       key: 'xGI_L5',
-      label: 'xGI (L5)',
+      label: 'xGI (5 GW)',
       sortable: true,
       render: (player) => (
         <span className="font-mono text-sm">
@@ -141,7 +141,7 @@ export function PlayerTable() {
     },
     {
       key: 'predPts_gw',
-      label: 'Pred GW',
+      label: 'Pred (Next)',
       sortable: true,
       render: (player) => (
         <span className="font-mono font-semibold text-primary">
@@ -151,7 +151,7 @@ export function PlayerTable() {
     },
     {
       key: 'predPts_3gw',
-      label: 'Pred 3GW',
+      label: 'Pred (3 GW)',
       sortable: true,
       hidden: true,
       render: (player) => (
@@ -162,7 +162,7 @@ export function PlayerTable() {
     },
     {
       key: 'predPts_6gw',
-      label: 'Pred 6GW',
+      label: 'Pred (6 GW)',
       sortable: true,
       hidden: true,
       render: (player) => (
@@ -295,9 +295,9 @@ export function PlayerTable() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-2xl overflow-hidden"
+      className="glass-card rounded-2xl overflow-hidden w-full"
     >
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border/50">

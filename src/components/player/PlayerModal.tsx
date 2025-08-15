@@ -62,14 +62,20 @@ export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
     xGI: match.xGI,
   }));
 
-  const mockFixtures = [
-    { gw: 16, opponent: 'CHE (H)', fdr: 3, restDays: 3 },
-    { gw: 17, opponent: 'ARS (A)', fdr: 4, restDays: 7 },
-    { gw: 18, opponent: 'LIV (H)', fdr: 4, restDays: 3 },
-    { gw: 19, opponent: 'NEW (A)', fdr: 2, restDays: 7 },
-    { gw: 20, opponent: 'BHA (H)', fdr: 3, restDays: 3 },
-    { gw: 21, opponent: 'TOT (A)', fdr: 4, restDays: 7 },
-  ];
+  // Generate some mock future fixtures based on the next opponent
+  const generateMockFixtures = (teamCode: string) => {
+    const opponents = ['ARS', 'CHE', 'LIV', 'MCI', 'MUN', 'TOT', 'NEW', 'BHA', 'FUL', 'WHU'];
+    const filteredOpponents = opponents.filter(opp => opp !== teamCode);
+    
+    return Array.from({ length: 6 }, (_, i) => ({
+      gw: 16 + i,
+      opponent: `${filteredOpponents[i % filteredOpponents.length]} (${Math.random() > 0.5 ? 'H' : 'A'})`,
+      fdr: Math.floor(Math.random() * 5) + 1,
+      restDays: i % 2 === 0 ? 3 : 7
+    }));
+  };
+  
+  const mockFixtures = generateMockFixtures(player.team);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,19 +205,33 @@ export function PlayerModal({ player, open, onOpenChange }: PlayerModalProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-3">
-                  Strong pick with excellent underlying numbers. High ceiling for captaincy consideration.
+                  {player.rotationRiskPct > 70 
+                    ? "High rotation risk - likely squad player or rarely plays. Consider only as budget enabler."
+                    : player.rotationRiskPct > 40 
+                      ? "Moderate rotation risk - not guaranteed to start every game. Monitor team news."
+                      : player.predPts_gw > 6
+                        ? "Strong pick with excellent underlying numbers. High ceiling for captaincy consideration."
+                        : "Steady option with consistent returns. Good for set-and-forget strategy."
+                  }
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Captaincy Rating:</span>
                   <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-4 w-4 ${
-                          star <= 4 ? 'text-yellow-500 fill-current' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const rating = player.rotationRiskPct > 70 ? 1 : 
+                                   player.rotationRiskPct > 40 ? 2 :
+                                   player.predPts_gw > 8 ? 5 :
+                                   player.predPts_gw > 6 ? 4 :
+                                   player.predPts_gw > 4 ? 3 : 2;
+                      return (
+                        <Star
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star <= rating ? 'text-yellow-500 fill-current' : 'text-gray-300'
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>

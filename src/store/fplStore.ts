@@ -141,7 +141,7 @@ export const useFPLStore = create<FPLStore>((set, get) => ({
   players: [],
   filteredPlayers: [],
   currentPage: 1,
-  itemsPerPage: 50,
+  itemsPerPage: 25,
   totalPages: 0,
   currentGameweek: 1,
   currentSeason: '24/25',
