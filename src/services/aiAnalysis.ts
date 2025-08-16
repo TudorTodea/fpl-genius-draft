@@ -63,45 +63,25 @@ Be specific about their playing time security, fixture difficulty, and current f
   }
 
   private async callAI(prompt: string): Promise<AIAnalysisResponse> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1-mini-2025-04-14',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert Fantasy Premier League analyst. Provide concise, tactical insights focusing on playing time, form, and fixtures. Always respond with valid JSON only.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 400
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-    
-    if (!content) {
-      throw new Error('No content in AI response');
-    }
-
+    // Since we're using Supabase, we'll call an edge function that handles the OpenAI API
     try {
-      return JSON.parse(content);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
-      throw new Error('Invalid JSON response from AI');
+      const response = await fetch('/api/analyze-player', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('AI Analysis API call failed:', error);
+      throw error;
     }
   }
 

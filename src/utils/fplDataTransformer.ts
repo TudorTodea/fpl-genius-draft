@@ -48,22 +48,37 @@ export function transformFPLPlayer(
   const expectedAssists = parseFloat(fplPlayer.expected_assists) || 0;
   const expectedGI = parseFloat(fplPlayer.expected_goal_involvements) || 0;
 
-  // Estimate rotation risk based on minutes, form, and selection status
+  // Calculate proper rotation risk based on minutes played and status
   let rotationRisk = 5;
   
-  // If player has very few minutes, high rotation risk
-  if (fplPlayer.minutes < 90) rotationRisk = 95; // Barely played
-  else if (fplPlayer.minutes < 270) rotationRisk = 75; // Squad player
-  else if (fplPlayer.minutes < 450) rotationRisk = 45; // Rotation prone
-  else if (fplPlayer.minutes < 720) rotationRisk = 25; // Regular starter with some rotation
-  else rotationRisk = 10; // Nailed starter
+  // Base rotation risk on actual minutes played this season
+  const totalMinutes = fplPlayer.minutes;
+  const gamesPlayedEstimate = Math.max(1, Math.floor(totalMinutes / 90) || 1);
+  const totalPossibleMinutes = 90 * 15; // Assuming 15 games played so far
+  const minutesPercentage = (totalMinutes / totalPossibleMinutes) * 100;
   
-  // Adjust based on ownership (proxy for expected starts)
-  if (ownership < 1.0) rotationRisk = Math.min(95, rotationRisk + 30);
-  else if (ownership < 5.0) rotationRisk = Math.min(85, rotationRisk + 15);
+  // Calculate risk based on playing time percentage
+  if (minutesPercentage >= 80) rotationRisk = 5; // Nailed starter (like Van Dijk)
+  else if (minutesPercentage >= 60) rotationRisk = 15; // Regular starter with occasional rest
+  else if (minutesPercentage >= 40) rotationRisk = 35; // Rotation player
+  else if (minutesPercentage >= 20) rotationRisk = 65; // Squad player
+  else rotationRisk = 90; // Rarely plays
   
-  // Adjust based on form
-  if (form < 2) rotationRisk = Math.min(90, rotationRisk + 10);
+  // Adjust for goalkeepers - they either play 100% or 0%
+  if (position === 'GK') {
+    if (totalMinutes > 800) rotationRisk = 5; // First choice keeper
+    else if (totalMinutes > 200) rotationRisk = 25; // Shared duties
+    else rotationRisk = 95; // Backup keeper
+  }
+  
+  // Adjust based on ownership - high ownership usually means regular starter
+  if (ownership > 20) rotationRisk = Math.max(5, rotationRisk - 10);
+  else if (ownership < 2) rotationRisk = Math.min(95, rotationRisk + 20);
+  
+  // Adjust based on current status
+  if (fplPlayer.status === 'i' || fplPlayer.status === 's') {
+    rotationRisk = Math.min(95, rotationRisk + 30);
+  }
 
   // Generate recent matches based on actual data patterns
   const gamesPlayed = Math.max(1, Math.floor(fplPlayer.minutes / 90) || 1);
@@ -115,29 +130,39 @@ function generateHistoryVsOpponent(fplPlayer: FPLPlayer, opponent: string): any[
   const opponentTeam = opponent.split(' (')[0];
   const isHome = opponent.includes('(H)');
   
+  // Only generate history for players who actually play
+  if (fplPlayer.minutes < 180) return []; // Less than 2 full games
+  
   // Generate realistic historical performance vs this opponent
-  const numMatches = Math.floor(Math.random() * 4) + 1; // 1-4 matches
+  const numMatches = Math.min(3, Math.max(1, Math.floor(fplPlayer.minutes / 450))); // Based on playing time
   const gamesPlayed = Math.max(1, Math.floor(fplPlayer.minutes / 90) || 1);
   const avgPoints = fplPlayer.total_points / gamesPlayed;
   
   return Array.from({ length: numMatches }, (_, i) => {
-    const daysAgo = (i + 1) * 60 + Math.floor(Math.random() * 30); // Spread over last few months
+    // Realistic dates from previous seasons
+    const seasonsAgo = Math.floor(i / 2); // 2 games per season max
+    const monthsAgo = seasonsAgo * 12 + (i % 2) * 6 + Math.floor(Math.random() * 3);
     const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
+    date.setMonth(date.getMonth() - monthsAgo);
     
-    // Home games typically slightly better
-    const homeBonus = isHome && i % 2 === 0 ? 1 : 0;
-    const points = Math.max(0, Math.round(avgPoints + homeBonus + (Math.random() - 0.5) * 4));
-    const minutes = points > 0 ? Math.floor(Math.random() * 45) + 45 : Math.floor(Math.random() * 30);
+    // More realistic performance based on position and player quality
+    let basePoints = avgPoints;
+    if (fplPlayer.element_type === 1) basePoints = Math.min(8, basePoints); // GK cap
+    if (fplPlayer.element_type === 2) basePoints = Math.min(12, basePoints); // DEF cap
+    
+    // Home advantage
+    const homeBonus = isHome && Math.random() > 0.3 ? 1 : 0;
+    const points = Math.max(0, Math.round(basePoints + homeBonus + (Math.random() - 0.5) * 3));
+    const minutes = points > 0 ? Math.floor(Math.random() * 20) + 70 : Math.floor(Math.random() * 30);
     
     return {
       date: date.toISOString().split('T')[0],
       minutes,
       points,
-      xG: Math.random() * 0.8,
-      xA: Math.random() * 0.6,
-      shots: Math.floor(Math.random() * 5),
-      chances: Math.floor(Math.random() * 3),
+      xG: Math.round((fplPlayer.element_type >= 3 ? Math.random() * 0.8 : Math.random() * 0.1) * 100) / 100,
+      xA: Math.round((fplPlayer.element_type >= 2 ? Math.random() * 0.6 : 0) * 100) / 100,
+      shots: fplPlayer.element_type >= 3 ? Math.floor(Math.random() * 5) : 0,
+      chances: fplPlayer.element_type >= 2 ? Math.floor(Math.random() * 3) : 0,
     };
   }).reverse(); // Most recent first
 }
