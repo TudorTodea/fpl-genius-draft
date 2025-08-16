@@ -63,10 +63,26 @@ Be specific about their playing time security, fixture difficulty, and current f
   }
 
   private async callAI(prompt: string): Promise<AIAnalysisResponse> {
-    // Use a simple rule-based analysis for now (free alternative)
-    // This could be replaced with a local AI model or free API later
-    const response = await this.generateLocalAnalysis(prompt);
-    return response;
+    // Call our Supabase edge function that uses Groq AI
+    try {
+      const response = await fetch('/functions/v1/analyze-player', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Groq AI Analysis failed:', error);
+      throw error;
+    }
   }
 
   private async generateLocalAnalysis(prompt: string): Promise<AIAnalysisResponse> {

@@ -13,18 +13,18 @@ serve(async (req) => {
   try {
     const { prompt } = await req.json()
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${Deno.env.get('GROQ_API_KEY')}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini-2025-04-14',
+        model: 'llama-3.1-70b-versatile',
         messages: [
           {
             role: 'system',
-            content: 'You are an expert Fantasy Premier League analyst with deep knowledge of player performance, tactics, and fixture difficulty. Provide realistic, data-driven insights. Always respond with valid JSON only.'
+            content: 'You are an expert Fantasy Premier League analyst with deep knowledge of player performance, tactics, and fixture difficulty. Provide realistic, data-driven insights based on actual football knowledge. Always respond with valid JSON only.'
           },
           {
             role: 'user',
@@ -37,7 +37,7 @@ serve(async (req) => {
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      throw new Error(`Groq API error: ${response.status}`)
     }
 
     const data = await response.json()
@@ -54,7 +54,7 @@ serve(async (req) => {
       })
     } catch (parseError) {
       console.error('Failed to parse AI response:', content)
-      throw new Error('Invalid JSON response from AI')
+      throw new Error('Invalid JSON response from Groq AI')
     }
   } catch (error) {
     console.error('Error:', error)
