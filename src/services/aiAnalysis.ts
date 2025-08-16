@@ -63,58 +63,83 @@ Be specific about their playing time security, fixture difficulty, and current f
   }
 
   private async callAI(prompt: string): Promise<AIAnalysisResponse> {
-    // Since we're using Supabase, we'll call an edge function that handles the OpenAI API
-    try {
-      const response = await fetch('/api/analyze-player', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('AI Analysis API call failed:', error);
-      throw error;
-    }
+    // Use a simple rule-based analysis for now (free alternative)
+    // This could be replaced with a local AI model or free API later
+    const response = await this.generateLocalAnalysis(prompt);
+    return response;
   }
 
-  private getFallbackAnalysis(player: Player): AIAnalysisResponse {
+  private async generateLocalAnalysis(prompt: string): Promise<AIAnalysisResponse> {
+    // Extract player data from prompt for rule-based analysis
+    const ownershipMatch = prompt.match(/Ownership: ([\d.]+)%/);
+    const rotationMatch = prompt.match(/Rotation Risk: ([\d.]+)%/);
+    const predPtsMatch = prompt.match(/Predicted Points Next GW: ([\d.]+)/);
+    const priceMatch = prompt.match(/Price: £([\d.]+)m/);
+    const fdrMatch = prompt.match(/Difficulty: (\d+)\/5/);
+    
+    const ownership = ownershipMatch ? parseFloat(ownershipMatch[1]) : 0;
+    const rotationRisk = rotationMatch ? parseFloat(rotationMatch[1]) : 50;
+    const predPts = predPtsMatch ? parseFloat(predPtsMatch[1]) : 0;
+    const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+    const fdr = fdrMatch ? parseInt(fdrMatch[1]) : 3;
+    
+    return this.generateSmartAnalysis(ownership, rotationRisk, predPts, price, fdr, prompt);
+  }
+
+  private generateSmartAnalysis(ownership: number, rotationRisk: number, predPts: number, price: number, fdr: number, prompt: string): AIAnalysisResponse {
     let analysis = '';
     let captainViability = 1;
-    let transferAdvice = 'Monitor form and fixtures';
+    let transferAdvice = 'Monitor';
     const riskFactors: string[] = [];
 
-    // Generate analysis based on data
-    if (player.rotationRiskPct > 60) {
-      analysis = `High rotation risk (${player.rotationRiskPct}%) makes ${player.name} unreliable for consistent returns.`;
-      riskFactors.push('High rotation risk');
+    // Extract player name and position from prompt
+    const nameMatch = prompt.match(/^([A-Za-z\s]+) \(([A-Z]+)\)/);
+    const playerName = nameMatch ? nameMatch[1] : 'Player';
+    const position = nameMatch ? nameMatch[2] : 'UNK';
+
+    // Determine player quality based on multiple factors
+    const isHighOwnership = ownership >= 15;
+    const isLowRotationRisk = rotationRisk <= 20;
+    const isGoodFixture = fdr <= 3;
+    const isHighPredicted = predPts >= 5;
+    const isPremium = price >= 8;
+
+    // Generate analysis based on player profile
+    if (rotationRisk >= 80) {
+      analysis = `${playerName} is a squad player with very limited game time. High rotation risk makes them unsuitable for regular selection.`;
+      captainViability = 1;
+      transferAdvice = 'Avoid - rarely plays';
+      riskFactors.push('Very high rotation risk', 'Limited playing time');
+    } else if (isHighOwnership && isLowRotationRisk && predPts > 6) {
+      analysis = `${playerName} is a premium template pick with excellent underlying stats. Strong captaincy potential with consistent returns expected.`;
+      captainViability = predPts > 8 ? 5 : 4;
+      transferAdvice = 'Essential - template player';
+      if (!isGoodFixture) riskFactors.push('Difficult fixture');
+    } else if (isLowRotationRisk && predPts > 4) {
+      analysis = `${playerName} offers solid returns as a regular starter. Good value pick with decent underlying numbers and secure playing time.`;
+      captainViability = predPts > 6 ? 3 : 2;
+      transferAdvice = 'Consider - reliable option';
+      if (fdr >= 4) riskFactors.push('Tough fixture');
+    } else if (ownership < 2 && rotationRisk > 50) {
+      analysis = `${playerName} is a fringe player with uncertain game time. Low ownership suggests limited appeal among FPL managers.`;
+      captainViability = 1;
       transferAdvice = 'Avoid - rotation concerns';
-    } else if (player.predPts_gw > 6 && player.rotationRiskPct < 30) {
-      analysis = `${player.name} offers excellent potential with ${player.predPts_gw.toFixed(1)} predicted points and secure starting position.`;
-      captainViability = player.predPts_gw > 8 ? 5 : 4;
-      transferAdvice = 'Essential - strong pick';
-    } else if (player.ownership > 40) {
-      analysis = `Popular template pick (${player.ownership}% owned) offering safe but unspectacular returns.`;
-      captainViability = 3;
-      transferAdvice = 'Consider - template safety';
+      riskFactors.push('High rotation risk', 'Low ownership');
     } else {
-      analysis = `Moderate option with ${player.formL5.toFixed(1)} form. Monitor fixtures and recent performances.`;
+      analysis = `${playerName} represents a moderate option with ${predPts.toFixed(1)} predicted points. Monitor team news and form trends before selecting.`;
       captainViability = 2;
+      transferAdvice = 'Monitor - potential differential';
+      if (rotationRisk > 40) riskFactors.push('Moderate rotation risk');
     }
 
-    if (player.injuryStatus !== 'Fit') {
-      riskFactors.push(`Injury status: ${player.injuryStatus}`);
+    // Add position-specific insights
+    if (position === 'GK' && rotationRisk > 30) {
+      riskFactors.push('Backup goalkeeper');
     }
 
-    if (player.nextOpponentFDR >= 4) {
-      riskFactors.push('Difficult fixture');
+    // Add fixture difficulty as risk factor
+    if (fdr >= 4) {
+      riskFactors.push('Difficult upcoming fixture');
     }
 
     return {
@@ -123,6 +148,17 @@ Be specific about their playing time security, fixture difficulty, and current f
       transferAdvice,
       riskFactors
     };
+  }
+
+  private getFallbackAnalysis(player: Player): AIAnalysisResponse {
+    return this.generateSmartAnalysis(
+      player.ownership,
+      player.rotationRiskPct,
+      player.predPts_gw,
+      player.price,
+      player.nextOpponentFDR,
+      `${player.name} (${player.position})`
+    );
   }
 }
 
